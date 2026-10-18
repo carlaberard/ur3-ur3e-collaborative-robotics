@@ -1,0 +1,80 @@
+# PRACTICE 4
+# David Arias, Carla Berard and Claudia Montero
+
+# ————————————————
+# UR3e_side.script (cliente) 
+# ————————————————
+
+def ur3e_collaboration(): 
+  # 1. Ir a home 
+  home_pose = [1.5708, -1.5708, 0.0, -1.5708, -1.5708, 0.0]
+  movej(home_pose, a=1.0, v=0.5) 
+
+  # 2. Abrir socket 
+  success = socket_open("PC_IP", 8080, socket_name="sock")
+  if not success:
+    popup("Error", "No se pudo abrir socket", True)
+    halt()
+  end
+
+  # 3.1 Pick pose 
+  pick_pose = p[0.02063, -0.31042, 0.102, 2.216, 2.227, 0.0]
+  approach_pick_pose = pose_add(pick_pose, p[0,0,0.1,0,0,0]) 
+
+  movel(approach_pick_pose, a=0.5, v=0.1)
+
+  # 4. Notificar que está listo al servidor
+  socket_send_string("client ready", socket_name="sock")
+
+  # 5. Esperar a que se haya movido el servidor
+  moved = socket_read_string(socket_name="sock", timeout=20)
+  if moved != "server moved":
+    popup("Error", "No llegó 'server moved'", True)
+    halt()
+  end
+
+  # 3.2 Pick pose
+  movel(pick_pose, a=0.5, v=0.1)
+
+  rg_grip(0, 10)
+  sleep(0.5)
+  rg_payload_set(0.01)
+
+  sleep(1.0)
+
+  movel(approach_pick_pose, a=0.5, v=0.1)
+  
+  # 6. Place pose
+  place_pose = p[-0.49219, -0.042, 0.014, 3.141, 0.036, 0.0]
+  approach_place_pose = pose_add(place_pose, p[0,0,0.04,0,0,0]) 
+
+  movel(approach_place_pose, a=0.5, v=0.1)
+  movel(place_pose, a=0.5, v=0.1)
+
+  rg_grip(50, 10)
+  sleep(0.5)
+  rg_payload_set(0.0)
+
+  sleep(1.0)
+
+  movel(approach_place_pose, a=0.5, v=0.1)
+
+  # 7. Notificar que el bloque está colocado al servidor
+  socket_send_string("block placed", socket_name="sock")
+
+  # 8. Esperar a que haga la operación el servidor
+  operated = socket_read_string(socket_name="sock", timeout=20)
+  if operated != "operated":
+    popup("Error", "No llegó 'operated'", True)
+    halt()
+  end
+
+  # 9. Regresar a home 
+  movej(home_pose, a=1.0, v=0.5)
+
+  # 10. Cerrar socket
+  socket_close(socket_name="sock")
+
+end
+
+ur3e_collaboration()

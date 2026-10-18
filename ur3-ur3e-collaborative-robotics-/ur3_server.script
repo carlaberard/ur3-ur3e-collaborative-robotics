@@ -1,0 +1,59 @@
+# PRACTICE 4
+# David Arias, Carla Berard and Claudia Montero
+
+# ————————————————
+# UR3_side.script (servidor)
+# ————————————————
+
+def ur3_collaboration():
+  # 1. Home 
+  home_pose = [3.14, -1.5708, 0.0, -1.5708, 0.0, 0.0]
+  movej(home_pose, a=1.0, v=0.5) 
+
+  # 2. Abrir socket 
+  success = socket_open("PC_IP", 8080, socket_name="sock")
+  if not success:
+    popup("Error", "No se pudo abrir socket", True)
+    halt()
+  end
+
+  # 3. Esperar a que esté listo el cliente
+  ready = socket_read_string(socket_name="sock", timeout=20)
+  if ready != "client ready":
+    popup("Error", "No llegó 'client ready'", True)
+    halt()
+  end
+
+  # 4. "Operate" pose
+  operate_pose = p[0.002, 0.701, 0.112, 0.73, -3.0, -1.31]
+  movej(operate_pose, a=1.0, v=0.5) 
+
+  # 5. Notificar que se ha movido al cliente
+  socket_send_string("server moved", socket_name="sock")
+
+  # 6. Esperar a que bloque sea colocado por el cliente
+  placed = socket_read_string(socket_name="sock", timeout=20)
+  if placed != "block placed":
+    popup("Error", "No llegó 'block placed'", True)
+    halt()
+  end
+
+  # 7. Rotar herramienta 180° en Z y volver a 0°
+  pose = get_actual_tcp_pose()
+  pose[5] = pose[5] + 3.14159
+  movej(pose, a=1.0, v=0.5)
+  pose[5] = pose[5] - 3.14159
+  movej(pose, a=1.0, v=0.5)
+
+  # 8. Notificar operación al cliente
+  socket_send_string("operated", socket_name="sock")
+
+  # 9. Home
+  movej(home_pose, a=1.0, v=0.5)
+
+  # 10. Cerrar socket
+  socket_close(socket_name="sock")
+
+end
+
+ur3_collaboration()
